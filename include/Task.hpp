@@ -5,9 +5,7 @@
 #include "Thread.hpp"
 #include "Mutex.hpp"
 
-/**
- *
- */
+
 typedef enum {
     TaskStateNotSubmitted,         /* Task initial state */
     TaskStateWaitingOnQueue,       /* Task is waiting on queue state */

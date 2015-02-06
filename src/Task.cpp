@@ -2,7 +2,9 @@
 #include "Task.hpp"
 
 #include <ctime>
+#include <cerrno>
 
+using namespace std;
 
 Task::Task() 
     : _pData( NULL ) 

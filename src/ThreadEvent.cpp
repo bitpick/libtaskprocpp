@@ -1,6 +1,8 @@
 
-#include "ThreadEvent.cpp"
+#include "ThreadEvent.hpp"
 #include <cerrno>
+
+using namespace std;
 
 ThreadEvent::ThreadEvent() {
     pthread_cond_init( &_threadCondition, NULL );

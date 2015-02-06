@@ -2,7 +2,7 @@
 #ifndef THREADEVENT_HPP_
 #define THREADEVENT_HPP_
 
-#include <pthread>
+#include <pthread.h>
 #include "Mutex.hpp"
 
 

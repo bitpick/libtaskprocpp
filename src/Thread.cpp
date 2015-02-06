@@ -3,7 +3,7 @@
 
 #include <ctime>
 
-
+using namespace std;
 
 int Sleep( unsigned int mSeconds ) {
 #ifdef USE_NANO_SECOND_SLEEP
@@ -14,6 +14,11 @@ int Sleep( unsigned int mSeconds ) {
     interval.tv_sec = 0;
     interval.tv_nsec = mSeconds;
     nanosleep( &interval, &reminder );
+
+    #ifdef FORCE_SLEEP_COMPLETED
+        if(interval.tv_nsec > 0)
+            Sleep((unsigned int)interval.tv_nsec / 1000000);
+    #endif
 #else
     usleep( mSeconds );
 #endif /* USE_NANO_SECOND_SLEEP */
@@ -21,17 +26,21 @@ int Sleep( unsigned int mSeconds ) {
     return 0; // for future use!
 }
 
+/* forward declarations */
+void* _THREAD( void* pData );
 
 
-
-Thread::Thread()
+Thread::Thread(TaskQueue *queue)
     : _threadRunning( false )
     , _state( ThreadStateInit )
     , _objCondition( NO_ERROR )
     , _threadMode( ThreadTypeEventBased )
     , _thread( 0L )
+    , _taskQueue(queue)
 {
-    _taskQueue = new TaskQueue( DEFAULT_TASKQUEUE_SIZE );
+    if(!_taskQueue)
+        _taskQueue = new TaskQueue( DEFAULT_TASKQUEUE_SIZE );
+
     if( ! _taskQueue ) {
         _objCondition |= MEMORY_FAULT;
         _state = ThreadStateFailure;
@@ -127,10 +136,14 @@ void Thread::SetIdleTime( DWORD newIdleTime ) {
 }
 
 
-void Thread::AddTask( Task* pTask ) {}
+void Thread::AddTask( Task* pTask ) {
+    // TODO: add to task queue
+}
 
 
-void Thread::RemoveTask( Task* pTask ) {}
+void Thread::RemoveTask( Task* pTask ) {
+    // TODO: remove from task queue
+}
 
 
 static ThreadId_t Thread::ThreadId() {
@@ -150,7 +163,7 @@ static bool Thread::ThreadIdIsEqual( ThreadId_t* t1, ThreadId_t* t2 ) {
 size_t Thread::GetStackSize() {
     size_t size;
     this->_mutex.Lock();
-        pthread_attr_getstacksize( &_threadAttr, &size );
+    pthread_attr_getstacksize( &_threadAttr, &size );
     this->_mutex.Unlock();
     return size;
 }
@@ -192,11 +205,11 @@ void* _THREAD( void* pData ) {
     if( ! thread )
         throw exception();
 
-    // set thead state and ID
+    // set thread state and ID
     thread->_mutex.Lock();
-        thread->_state = ThreadStateWaiting;
-        thread->_threadRunning = true;
-        thread->_thread = Thread::ThreadId();
+    thread->_state = ThreadStateWaiting;
+    thread->_threadRunning = true;
+    thread->_thread = Thread::ThreadId();
     thread->_mutex.Unlock();
 
     while( true ) {
@@ -207,16 +220,16 @@ void* _THREAD( void* pData ) {
         }
 
         thread->_mutex.Lock();
-            thread->_state = ThreadStateBusy
+        thread->_state = ThreadStateBusy
         thread->_mutex.Unlock();
 
         // thread shutting down if not running anymore
         thread->_mutex.Lock();
-            if( ! thread->_threadRunning ) {
-                thread->_state = ThreadStateShuttingDown;
-                thread->_mutex.Unlock();
-                break;
-            }
+        if( ! thread->_threadRunning ) {
+            thread->_state = ThreadStateShuttingDown;
+            thread->_mutex.Unlock();
+            break;
+        }
         thread->_mutex.Unlock();
 
         /* thread working state */
@@ -228,7 +241,7 @@ void* _THREAD( void* pData ) {
                 Task* t;
                 
                 thread->_mutex.Lock();
-                    t = thread->_taskQueue->Pop();
+                t = thread->_taskQueue->Pop();
                 thread->_mutex.Unlock();
 
                 t->SetTaskStatus( TaskStateBeingProcessed );
@@ -259,8 +272,8 @@ void* _THREAD( void* pData ) {
 
     // update thread state and exit thread function
     thread->_mutex.Lock();
-        thread->_state = ThreadStateDown;
-        thread->_threadRunning = false;
+    thread->_state = ThreadStateDown;
+    thread->_threadRunning = false;
     thread->_mutex.Unlock();
 
     return (void*) 0;

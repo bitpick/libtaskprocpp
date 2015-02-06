@@ -4,7 +4,12 @@
 
 #include <pthread.h>
 
-#include "wintypes.h"
+#ifdef __linux__
+    #include "wintypes.h"
+#endif
+#ifdef _WIN32
+    #include <windows.h>
+#endif
 #include "Task.hpp"
 #include "TaskQueue.hpp"
 #include "Mutex.hpp"
@@ -12,7 +17,7 @@
 
 
 typedef enum {
-    ThreadStateInit,
+    ThreadStateInit = 0,
     ThreadStateWaiting,
     ThreadStateBusy,
     ThreadStateShuttingDown,
@@ -49,7 +54,7 @@ typedef DWORD ThreadId_t;
  */
 class Thread {
     public:
-        Thread();
+        Thread(TaskQueue *queue = NULL);
         ~Thread();
 
         bool Start();
@@ -97,8 +102,8 @@ class Thread {
         ThreadType_t        _threadMode;
         /** idle time value */
         DWORD               _idlTime;
-//        /** current processing task */
-//        Task*               _currentTask;
+        /** current processing task */
+        Task*               _currentTask;
 };
 
 #endif /* THREAD_HPP_ */
